@@ -4,12 +4,12 @@ with open("README.md", "r", encoding="utf-8") as f:
     long_description = f.read()
 
 
-__version__ = "0.0.0"
+__version__ = "0.0.0.1"
 
 REPO_NAME = "End-to-end-ML-Project"
-AUTHOR_USER_NAME = "entbappy"
+AUTHOR_USER_NAME = "Ahamed-Safnas"
 SRC_REPO = "mlProject"
-AUTHOR_EMAIL = "entbappy73@gmail.com"
+AUTHOR_EMAIL = "safnas2042ahamed@gmail.com"
 
 
 setuptools.setup(
@@ -17,7 +17,7 @@ setuptools.setup(
     version=__version__,
     author=AUTHOR_USER_NAME,
     author_email=AUTHOR_EMAIL,
-    description="A small python package for ml app",
+    description="Deployable wine quality prediction system with configuration-driven pipeline, REST API, Docker support and AWS ready GitHub Actions for CI/CD.",
     long_description=long_description,
     long_description_content="text/markdown",
     url=f"https://github.com/{AUTHOR_USER_NAME}/{REPO_NAME}",
