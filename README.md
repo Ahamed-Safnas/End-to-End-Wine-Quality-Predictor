@@ -1,5 +1,8 @@
-# End-to-End-Wine-Quality-Prediction
+# 🍷 Wine Quality Predictor — End-to-End MLOps Pipeline
 
+> End-to-end MLOps pipeline for wine quality prediction | ElasticNet regression on 11 physicochemical features | Modular pipeline stages (ingest, validate, transform, train, evaluate) | MLflow experiment tracking | Flask web UI | CI/CD via GitHub Actions + Docker + AWS ECR + EC2
+
+---
 
 ## Workflows
 
@@ -13,105 +16,284 @@
 8. Update the main.py
 9. Update the app.py
 
+---
 
-# How to run?
-### STEPS:
+## 📌 Table of Contents
 
-Clone the repository
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Tech Stack](#tech-stack)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
+- [Pipeline Stages](#pipeline-stages)
+- [Experiment Tracking](#experiment-tracking)
+- [Flask Web App](#flask-web-app)
+- [CI/CD Deployment](#cicd-deployment)
+
+---
+
+## Overview
+
+This project predicts the quality score of red wine based on 11 physicochemical input features. It is built as a **modular, production-style ML pipeline** with schema validation, centralized configuration, MLflow experiment tracking, and an automated CI/CD deployment pipeline to AWS.
+
+**Input Features:**
+
+| Feature | Type |
+|---|---|
+| Fixed Acidity | float64 |
+| Volatile Acidity | float64 |
+| Citric Acid | float64 |
+| Residual Sugar | float64 |
+| Chlorides | float64 |
+| Free Sulfur Dioxide | float64 |
+| Total Sulfur Dioxide | float64 |
+| Density | float64 |
+| pH | float64 |
+| Sulphates | float64 |
+| Alcohol | float64 |
+
+**Target:** `quality` (integer score)
+
+---
+
+## Architecture
+
+```
+Remote Dataset (ZIP)
+        |
+        v
++------------------+
+|  Data Ingestion   |  <- Download, unzip, store in artifacts/
++--------+---------+
+         |
+         v
++--------------------+
+|  Data Validation    |  <- Schema check against schema.yaml
++--------+-----------+
+         |
+         v
++------------------------+
+|  Data Transformation    |  <- Train/test split
++--------+---------------+
+         |
+         v
++------------------+
+|  Model Trainer    |  <- ElasticNet (alpha=0.2, l1_ratio=0.1)
++--------+---------+
+         |
+         v
++--------------------+
+|  Model Evaluation   |  <- RMSE, MAE, R2 logged to MLflow
++--------+-----------+
+         |
+         v
++------------------+
+|  Flask Web App    |  <- /predict endpoint with HTML UI
++------------------+
+```
+
+---
+
+## Tech Stack
+
+| Category | Tools |
+|---|---|
+| **ML / Modeling** | scikit-learn, ElasticNet |
+| **Experiment Tracking** | MLflow |
+| **Web Framework** | Flask |
+| **Containerization** | Docker |
+| **Cloud Infrastructure** | AWS EC2, AWS ECR |
+| **CI/CD** | GitHub Actions |
+| **Config Management** | config.yaml, schema.yaml, params.yaml |
+| **Environment** | Python 3.8, Conda |
+
+---
+
+## Project Structure
+
+```
+wine-quality-predictor-mlops/
+|
++-- src/mlProject/
+|   +-- pipeline/
+|   |   +-- stage_01_data_ingestion.py
+|   |   +-- stage_02_data_validation.py
+|   |   +-- stage_03_data_transformation.py
+|   |   +-- stage_04_model_trainer.py
+|   |   +-- stage_05_model_evaluation.py
+|   |   +-- prediction.py
+|   +-- components/         # Core logic for each stage
+|   +-- config/             # Configuration manager
+|   +-- entity/             # Dataclasses for config entities
+|   +-- utils/              # Common utility functions
+|
++-- config/
+|   +-- config.yaml         # All file paths and directories
+|
++-- .github/workflows/
+|   +-- cicd.yaml           # GitHub Actions CI/CD workflow
+|
++-- templates/              # HTML templates for Flask UI
++-- artifacts/              # Auto-generated pipeline outputs (gitignored)
++-- app.py                  # Flask application
++-- main.py                 # Pipeline orchestrator
++-- params.yaml             # Model hyperparameters
++-- schema.yaml             # Data contract / column validation
++-- Dockerfile
++-- requirements.txt
++-- setup.py
++-- README.md
+```
+
+---
+
+## Getting Started
+
+### 1. Clone the Repository
 
 ```bash
-https://github.com/entbappy/End-to-End-Wine-Quality-Prediction
+git clone https://github.com/Ahamed-Safnas/wine-quality-predictor-mlops.git
+cd wine-quality-predictor-mlops
 ```
-### STEP 01- Create a conda environment after opening the repository
+
+### 2. Create and Activate Conda Environment
 
 ```bash
 conda create -n mlproj python=3.8 -y
-```
-
-```bash
 conda activate mlproj
 ```
 
+### 3. Install Dependencies
 
-### STEP 02- install the requirements
 ```bash
 pip install -r requirements.txt
 ```
+
+### 4. Run the Full Training Pipeline
+
+```bash
+python main.py
+```
+
+### 5. Launch the Flask App
 
 ```bash
 python app.py
 ```
 
+Visit `http://localhost:8080` to use the prediction UI.
 
-# AWS-CICD-Deployment-with-Github-Actions
+---
 
-## 1. Login to AWS console.
+## Pipeline Stages
 
-## 2. Create IAM user for deployment
+All stages are orchestrated via `main.py` and configured through `config/config.yaml`.
 
-	#with specific access
+### Stage 1: Data Ingestion
+Downloads the raw wine quality dataset from a remote URL, unzips it, and stores it under `artifacts/data_ingestion/`.
 
-	1. EC2 access : It is virtual machine
+### Stage 2: Data Validation
+Validates all columns and dtypes against `schema.yaml` before any transformation begins. A `status.txt` file is written indicating pass or fail.
 
-	2. ECR: Elastic Container registry to save your docker image in aws
+### Stage 3: Data Transformation
+Performs train/test split on the validated dataset. Outputs saved to `artifacts/data_transformation/`.
 
+### Stage 4: Model Trainer
+Trains an **ElasticNet** regression model using hyperparameters from `params.yaml`:
 
-	#Description: About the deployment
+```yaml
+ElasticNet:
+  alpha: 0.2
+  l1_ratio: 0.1
+```
 
-	1. Build docker image of the source code
+Saves the trained model as `model.joblib` under `artifacts/model_trainer/`.
 
-	2. Push your docker image to ECR
+### Stage 5: Model Evaluation
+Evaluates the model on the test set and logs the following metrics to **MLflow**:
 
-	3. Launch Your EC2 
+- RMSE (Root Mean Squared Error)
+- MAE (Mean Absolute Error)
+- R2 Score
 
-	4. Pull Your image from ECR in EC2
+Metrics are also saved locally to `artifacts/model_evaluation/metrics.json`.
 
-	5. Lauch your docker image in EC2
+---
 
-	#Policy:
+## Experiment Tracking
 
-	1. AmazonEC2ContainerRegistryFullAccess
+MLflow is used to track all training runs and evaluation metrics. Each run logs hyperparameters and performance scores for easy comparison.
 
-	2. AmazonEC2FullAccess
+To view the MLflow UI locally:
 
-	
-## 3. Create ECR repo to store/save docker image
-    - Save the URI: 193801311654.dkr.ecr.us-east-1.amazonaws.com/mlproject
+```bash
+mlflow ui
+```
 
-	
-## 4. Create EC2 machine (Ubuntu) 
+Then visit `http://localhost:5000`.
 
-## 5. Open EC2 and Install docker in EC2 Machine:
-	
-	
-	#optinal
+---
 
-	sudo apt-get update -y
+## Flask Web App
 
-	sudo apt-get upgrade
-	
-	#required
+The Flask app exposes three routes:
 
-	curl -fsSL https://get.docker.com -o get-docker.sh
+| Route | Method | Description |
+|---|---|---|
+| `/` | GET | Home page |
+| `/train` | GET | Triggers the full training pipeline |
+| `/predict` | POST | Accepts 11 feature inputs and returns a quality prediction |
 
-	sudo sh get-docker.sh
+---
 
-	sudo usermod -aG docker ubuntu
+## CI/CD Deployment
 
-	newgrp docker
-	
-# 6. Configure EC2 as self-hosted runner: 
-    setting>actions>runner>new self hosted runner> choose os> then run command one by one
+The deployment pipeline is fully automated via **GitHub Actions** and triggers on every push to `main`.
 
+### Flow
 
-# 7. Setup github secrets:
+```
+Code Push to main
+       |
+       v
+GitHub Actions (CI)
+  - Lint check
+  - Unit tests
+       |
+       v
+Build Docker Image
+       |
+       v
+Push to AWS ECR
+       |
+       v
+Deploy to AWS EC2 (self-hosted runner)
+  - Pull image from ECR
+  - Run container on port 8080
+```
 
-    AWS_ACCESS_KEY_ID=
+### AWS Setup Required
 
-    AWS_SECRET_ACCESS_KEY=
+1. Create an IAM user with `AmazonEC2FullAccess` and `AmazonEC2ContainerRegistryFullAccess`
+2. Create an ECR repository
+3. Launch an EC2 instance (Ubuntu) and install Docker
+4. Configure EC2 as a self-hosted GitHub Actions runner
+5. Add the following GitHub Secrets:
 
-    AWS_REGION = us-east-1
+```
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+AWS_REGION
+AWS_ECR_LOGIN_URI
+ECR_REPOSITORY_NAME
+```
 
-    AWS_ECR_LOGIN_URI = demo>>  566373416292.dkr.ecr.ap-south-1.amazonaws.com
+---
 
-    ECR_REPOSITORY_NAME = simple-app
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">Built by <a href="https://github.com/Ahamed-Safnas">Ahamed Safnas</a></p>
